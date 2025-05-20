@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Juego de Memoria - Expresiones Dev</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #ffffff;
+      color: rgb(0, 0, 0);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      margin: 0;
+    }
+    h1 { margin-bottom: 10px; }
+    #controls { margin-bottom: 20px; }
+    select, button {
+      background: #2196f3;
+      border: none;
+      color: white;
+      padding: 8px 16px;
+      font-size: 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 0 5px;
+    }
+    .tablero {
+      display: grid;
+      row-gap: 10px;
+      column-gap: 20px;
+      margin: 20px 0;
+    }
+    .carta {
+      width: 100px;
+      height: 60px;
+      background: #b9dbe9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      padding: 5px;
+      text-align: center;
+      cursor: pointer;
+      border-radius: 6px;
+      user-select: none;
+      transition: background 0.3s;
+    }
+    .carta.volteada { background: #2196f3; }
+    .carta.acertada { background: #4caf50; pointer-events: none; }
+  </style>
+</head>
+<body>
+
+  <h1>Juego de Memoria: Expresiones Dev</h1>
+  <div id="controls">
+    <select id="difficulty">
+      <option value="8">Principiante (4 pares → 8 cartas)</option>
+      <option value="16">Intermedio (8 pares → 16 cartas)</option>
+      <option value="24" selected>Avanzado (12 pares → 24 cartas)</option>
+    </select>
+    <button id="startBtn">Iniciar / Mezclar</button>
+  </div>
+
+  <div class="tablero" id="tablero"></div>
+
+  <script>
+    const expresiones = [
+      ["Hacer commit",     "Make a commit"],
+      ["empujar al repositorio",     "Push to repo"],
+      ["Hacer cambios",  "Pull changes"],
+      ["Romper producción","Break production"],
+      ["Mergear ramas",      "Merge branches"],
+      ["Deploy automático",     "Auto-deploy"],
+      ["Depurar",                     "Debug"],
+      ["Refactorizar",        "Refactor code"],
+      ["Escribir tests",        "Write tests"],
+      ["Levantar server",      "Start server"],
+      ["Ejecutar",                  "Execute"],
+      ["Crear rama",          "Create branch"]
+    ];
+
+    const tablero    = document.getElementById('tablero');
+    const startBtn   = document.getElementById('startBtn');
+    const diffSelect = document.getElementById('difficulty');
+    let paresUsados = [];
+    let seleccionadas = [];
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function iniciarJuego() {
+      seleccionadas = [];
+      const totalCartas     = parseInt(diffSelect.value, 10);
+      const paresNecesarios = totalCartas / 2;
+
+      // Ajuste fijo de columnas
+      let cols;
+      switch (totalCartas) {
+        case 8:  cols = 4; break;   // 2x4
+        case 16: cols = 4; break;   // 4x4
+        case 24: cols = 6; break;   // 4x6
+        default: cols = 4;
+      }
+      tablero.style.gridTemplateColumns = `repeat(${cols}, 100px)`;
+
+      // Elegir pares únicos
+      const paresBarajados = shuffle(expresiones.slice());
+      paresUsados = paresBarajados.slice(0, paresNecesarios);
+
+      // Construir cartas (solo flat, sin duplicar)
+      const cartas = shuffle(paresUsados.flat());
+
+      // Renderizar cartas
+      tablero.innerHTML = '';
+      cartas.forEach(valor => {
+        const c = document.createElement('div');
+        c.className     = 'carta';
+        c.dataset.valor = valor;
+        c.textContent   = '';
+        c.addEventListener('click', () => voltear(c));
+        tablero.appendChild(c);
+      });
+
+      // Mostrar todas inicialmente
+      document.querySelectorAll('.carta').forEach(c => {
+        c.classList.add('volteada');
+        c.textContent = c.dataset.valor;
+      });
+      setTimeout(() => {
+        document.querySelectorAll('.carta').forEach(c => {
+          c.classList.remove('volteada');
+          c.textContent = '';
+        });
+      }, 1500);
+    }
+
+    function voltear(carta) {
+      if (
+        carta.classList.contains('volteada') ||
+        carta.classList.contains('acertada') ||
+        seleccionadas.length === 2
+      ) return;
+
+      carta.classList.add('volteada');
+      carta.textContent = carta.dataset.valor;
+      seleccionadas.push(carta);
+
+      if (seleccionadas.length === 2) {
+        const [c1, c2] = seleccionadas;
+        const v1 = c1.dataset.valor;
+        const v2 = c2.dataset.valor;
+        const esPar = paresUsados.some(pair => pair.includes(v1) && pair.includes(v2) && v1 !== v2);
+        if (esPar) {
+          c1.classList.add('acertada');
+          c2.classList.add('acertada');
+        }
+        setTimeout(() => {
+          seleccionadas.forEach(c => {
+            if (!c.classList.contains('acertada')) {
+              c.classList.remove('volteada');
+              c.textContent = '';
+            }
+          });
+          seleccionadas = [];
+          // Victoria
+          const aciertos = document.querySelectorAll('.carta.acertada').length;
+          if (aciertos === totalCartas) alert('¡Felicidades, ganaste!');
+        }, 1000);
+      }
+    }
+
+    startBtn.addEventListener('click', iniciarJuego);
+  </script>
+
+</body>
+</html>
